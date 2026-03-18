@@ -60,6 +60,15 @@ def _connect(account: dict) -> imaplib.IMAP4 | imaplib.IMAP4_SSL:
 
     conn.login(account["email"], account["password"])
 
+    # 网易邮箱兼容：发送 IMAP ID 命令，避免 Unsafe Login
+    email_addr = account.get("email", "")
+    if email_addr.endswith("@163.com") or email_addr.endswith("@126.com"):
+        id_payload = '("name" "AstrBot-MailNotify" "version" "1.2.0" "vendor" "AstrBot")'
+        try:
+            conn.xatom("ID", id_payload)
+        except Exception:
+            pass  # 非163/不支持ID的服务器可忽略
+
     # 以只读模式优先选中 INBOX，不会意外修改服务器上的已读状态。
     # 某些邮箱服务商（如部分网易环境）可能对只读模式兼容性较弱，
     # 因此在只读失败时再回退到非只读模式。
