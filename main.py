@@ -14,7 +14,7 @@ from .smtp_client import smtp_send_mail
     "astrbot_plugin_mail_notify",
     "YourName",
     "监控邮箱新邮件并通过 QQ 私聊发送通知",
-    "1.2.0",
+    "1.2.2",
 )
 class MailNotifyPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -27,34 +27,31 @@ class MailNotifyPlugin(Star):
         self._account_status: dict[str, str] = {}
 
     async def initialize(self):
-        """Called after plugin instantiation, start background mail check loop."""
-        # The plugin starts its own polling loop after AstrBot loads it.
+        """插件初始化后启动后台邮件检查循环"""
         self._check_task = asyncio.create_task(self._check_loop())
-        logger.info("MailNotify: background check loop started.")
+        logger.info("邮件通知插件：后台检查循环已启动。")
 
-    # ── Background Loop ──────────────────────────────────────────
+    # ── 后台循环 ──────────────────────────────────────────
 
     async def _check_loop(self):
-        await asyncio.sleep(10)  # wait for everything to settle
+        await asyncio.sleep(10)  # 等待系统初始化完成
         while True:
             try:
                 interval = self.config.get("check_interval", 5)
                 notify_umo = self.config.get("notify_umo", "")
-                # Poll only after a target conversation is bound.
+                # 只有绑定了通知目标才轮询
                 if notify_umo:
                     accounts = self.config.get("mail_accounts", [])
                     for account in accounts:
                         if not account.get("email") or not account.get("imap_server"):
                             continue
                         try:
-                            # Each account is checked independently so one failure
-                            # does not block the others.
                             await self._check_account(account, notify_umo)
                             self._account_status[account["email"]] = "✅ 正常"
                         except Exception as e:
                             self._account_status[account["email"]] = f"❌ {str(e)[:80]}"
                             logger.error(
-                                f"MailNotify: check failed for {account['email']}: {e}"
+                                f"邮件通知插件：{account['email']} 检查失败: {e}"
                             )
                         self._last_check_time[account["email"]] = (
                             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -63,49 +60,45 @@ class MailNotifyPlugin(Star):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"MailNotify: loop error: {e}")
+                logger.error(f"邮件通知插件：循环异常: {e}")
                 await asyncio.sleep(60)
 
-    # ── IMAP Logic ───────────────────────────────────────────────
+    # ── IMAP逻辑 ───────────────────────────────────────────────
 
     async def _check_account(self, account: dict, notify_umo: str):
-        # Every mailbox has its own persisted keys so multiple accounts do not clash.
+        # 每个邮箱独立存储状态，避免冲突
         account_email = account["email"]
         max_body_len = self.config.get("max_body_length", 500)
 
         uid_key = f"last_uid_{account_email}"
         init_key = f"init_time_{account_email}"
-        # KV data is stored by AstrBot in data/data_v4.db.
         last_uid = await self.get_kv_data(uid_key, 0) or 0
         init_time = await self.get_kv_data(init_key, "")
 
         is_first_run = not init_time
         if is_first_run:
-            # First run records the start time and current UID baseline,
-            # preventing old inbox history from being pushed as new mail.
+            # 首次运行记录初始化时间和当前UID基线，防止历史邮件被推送
             init_time = datetime.now(timezone.utc).isoformat()
             await self.put_kv_data(init_key, init_time)
 
-        # imaplib is blocking, so the actual mailbox query runs in a worker thread.
+        # imaplib为阻塞操作，实际查询在工作线程中执行
         new_emails, new_max_uid = await asyncio.to_thread(
             imap_fetch_new, account, last_uid, max_body_len
         )
 
         if new_max_uid > last_uid:
-            # Persist the newest UID after a successful fetch for next incremental sync.
             await self.put_kv_data(uid_key, new_max_uid)
 
         if is_first_run:
             if new_max_uid > 0:
                 logger.info(
-                    f"MailNotify: initialized {account_email}, max UID = {new_max_uid}"
+                    f"邮件通知插件：{account_email} 初始化完成，最大UID = {new_max_uid}"
                 )
             return
 
         init_dt = datetime.fromisoformat(init_time)
         for mail_info in new_emails:
-            # Double-check the parsed mail date against init_time to avoid edge cases
-            # where a just-fetched mail still belongs to the historical backlog.
+            # 二次校验邮件时间，避免刚拉取的邮件属于历史存量
             if is_recent_email(mail_info, init_dt):
                 await self._send_notification(account, mail_info, notify_umo)
 
@@ -116,11 +109,9 @@ class MailNotifyPlugin(Star):
         use_ai = self.config.get("ai_summary", False)
         body_text = mail_info["body"]
 
-        # Optional AI summary replaces the raw preview text when enabled.
         if use_ai and body_text:
             body_text = await self._try_ai_summary(mail_info, notify_umo, body_text)
 
-        # Build a plain text message and let AstrBot deliver it to the bound session.
         lines = [
             f"📬 新邮件通知 [{account_name}]",
             "━━━━━━━━━━━━━━━━",
@@ -141,7 +132,6 @@ class MailNotifyPlugin(Star):
         self, mail_info: dict, notify_umo: str, fallback: str
     ) -> str:
         try:
-            # Reuse the chat provider already bound to the target conversation.
             provider_id = await self.context.get_current_chat_provider_id(
                 umo=notify_umo
             )
@@ -171,6 +161,27 @@ class MailNotifyPlugin(Star):
             if target_name in (name, addr):
                 return acc
         return None
+
+    def _get_admin_uids(self) -> set[str]:
+        admin_uids = self.config.get("admin_uids", []) or []
+        return {
+            str(uid).strip()
+            for uid in admin_uids
+            if isinstance(uid, (str, int)) and str(uid).strip()
+        }
+
+    def _get_admin_denied_message(self) -> str:
+        if not self._get_admin_uids():
+            return (
+                "❌ 还未指定插件管理员。\n"
+                "请在插件web设置的admin_uid中添加用户id。"
+            )
+        return "❌ 无权限使用该命令。"
+
+    def _is_plugin_admin(self, event: AstrMessageEvent) -> bool:
+        admin_uids = self._get_admin_uids()
+        sender_id = str(event.get_sender_id()).strip()
+        return bool(sender_id and sender_id in admin_uids)
 
     def _parse_mail_reply_args(self, message_str: str) -> tuple[str, str, str, str]:
         raw = re.sub(r"\s+", " ", (message_str or "").strip())
@@ -212,6 +223,9 @@ class MailNotifyPlugin(Star):
 
     @filter.command("mail_bind")
     async def mail_bind(self, event: AstrMessageEvent):
+        if not self._is_plugin_admin(event):
+            yield event.plain_result(self._get_admin_denied_message())
+            return
         """绑定当前会话为邮件通知目标"""
         umo = event.unified_msg_origin
         # This is regular plugin config, not KV state, so it is saved in config files.
@@ -221,6 +235,9 @@ class MailNotifyPlugin(Star):
 
     @filter.command("mail_status")
     async def mail_status(self, event: AstrMessageEvent):
+        if not self._is_plugin_admin(event):
+            yield event.plain_result(self._get_admin_denied_message())
+            return
         """查看所有邮箱的监控状态"""
         # Read current config plus runtime cache to render a status snapshot.
         accounts = self.config.get("mail_accounts", [])
@@ -251,6 +268,9 @@ class MailNotifyPlugin(Star):
 
     @filter.command("mail_check")
     async def mail_check(self, event: AstrMessageEvent):
+        if not self._is_plugin_admin(event):
+            yield event.plain_result(self._get_admin_denied_message())
+            return
         """立即手动检查所有邮箱"""
         accounts = self.config.get("mail_accounts", [])
         if not accounts:
@@ -259,7 +279,12 @@ class MailNotifyPlugin(Star):
             )
             return
 
-        notify_umo = self.config.get("notify_umo", "") or event.unified_msg_origin
+        notify_umo = self.config.get("notify_umo", "")
+        if not notify_umo:
+            yield event.plain_result(
+                "❌ Notification target is not bound yet. Please run /mail_bind first."
+            )
+            return
         yield event.plain_result("🔍 正在检查所有邮箱...")
 
         # Manual check reuses the same account-checking path as the background loop.
@@ -287,6 +312,9 @@ class MailNotifyPlugin(Star):
     async def mail_query(
         self, event: AstrMessageEvent, account_name: str, since_date: str
     ):
+        if not self._is_plugin_admin(event):
+            yield event.plain_result(self._get_admin_denied_message())
+            return
         """查询指定邮箱自某日期以来的邮件，如 /mail_query qq邮箱 2026-03-01"""
         accounts = self.config.get("mail_accounts", [])
 
@@ -343,9 +371,11 @@ class MailNotifyPlugin(Star):
             lines.append(f"   📤 {m['from_name']}  🕐 {m['date']}")
         yield event.plain_result("\n".join(lines))
 
-    @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("mail_reply")
     async def mail_reply(self, event: AstrMessageEvent):
+        if not self._is_plugin_admin(event):
+            yield event.plain_result(self._get_admin_denied_message())
+            return
         """手动发送邮件回复。格式：/mail_reply <账户备注名> <收件人邮箱> <主题>|<正文>"""
         usage = (
             "❌ 用法错误\n"

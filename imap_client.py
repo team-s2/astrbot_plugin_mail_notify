@@ -63,7 +63,9 @@ def _connect(account: dict) -> imaplib.IMAP4 | imaplib.IMAP4_SSL:
     # 网易邮箱兼容：发送 IMAP ID 命令，避免 Unsafe Login
     email_addr = account.get("email", "")
     if email_addr.endswith("@163.com") or email_addr.endswith("@126.com"):
-        id_payload = '("name" "AstrBot-MailNotify" "version" "1.2.0" "vendor" "AstrBot")'
+        id_payload = (
+            '("name" "AstrBot-MailNotify" "version" "1.2.0" "vendor" "AstrBot")'
+        )
         try:
             conn.xatom("ID", id_payload)
         except Exception:

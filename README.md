@@ -2,7 +2,7 @@
 
 # 📬 邮件通知插件
 
-[![Plugin Version](https://img.shields.io/badge/Latest_Version-v1.2.0-blue.svg?style=for-the-badge&color=76bad9)](https://github.com/gangcaiyoule/astrbot_plugin_mail_notify)
+[![Plugin Version](https://img.shields.io/badge/Latest_Version-v1.2.2-blue.svg?style=for-the-badge&color=76bad9)](https://github.com/gangcaiyoule/astrbot_plugin_mail_notify)
 [![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-ff69b4?style=for-the-badge)](https://github.com/AstrBotDevs/AstrBot)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
@@ -279,14 +279,25 @@ Outlook 可以直接使用**账户登录密码**。
 
 ## 📦 版本更新日志
 
-### v1.2.0
-- 新增 `/mail_reply` 手动回复指令（管理员可用）
-- 新增 SMTP 发信支持（SSL / STARTTLS）
-- 邮箱账户配置新增 SMTP 字段，支持 `smtp_password` 留空回退 `password`
+### v1.2
+- 兼容网易邮箱
+- 添加管理员列表，唯管理员有权限使用指令
+- 增加发邮件功能
 
 ### v1.1.3
 - 支持多邮箱 IMAP 新邮件监控与自动通知
 - 支持 AI 摘要、手动检查、状态查看与历史查询
+
+## 权限
+
+- 请先在web界面中配置“admin_uid”.
+- 唯有管理员有权使用指令.
+
+## 联系
+
+QQ: `964389211`
+
+如果本插件有bug或有建议，欢迎提出Issues和PRs，也可以直接联系作者qq。
 
 ## License
 

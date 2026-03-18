@@ -76,6 +76,12 @@
     "default": 5,
     "hint": "每隔多少分钟检查一次新邮件，建议不低于 2 分钟"
   },
+  "admin_uids": {
+    "description": "管理员列表",
+    "type": "list",
+    "default": [],
+    "hint": "输入管理员qq号，微信号，飞书号..."
+  },
   "notify_umo": {
     "description": "通知目标会话 ID",
     "type": "string",
