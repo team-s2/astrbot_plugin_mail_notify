@@ -8,6 +8,11 @@ from astrbot.api.star import Context, Star, register
 
 from .imap_client import imap_fetch_new, imap_query_since, is_recent_email
 from .smtp_client import smtp_send_mail
+from .timezone_labels import (
+    format_mail_display_time,
+    format_runtime_display_time,
+    get_display_timezone_name,
+)
 
 
 @register(
@@ -25,6 +30,22 @@ class MailNotifyPlugin(Star):
         # Runtime-only status used by /mail_status; not persisted.
         self._last_check_time: dict[str, str] = {}
         self._account_status: dict[str, str] = {}
+
+    def _get_display_timezone(self) -> str:
+        configured_name = self.config.get("display_timezone", "")
+        if configured_name == "__custom__":
+            configured_name = self.config.get("display_timezone_custom", "")
+        return get_display_timezone_name(configured_name)
+
+    def _format_mail_time(self, mail_info: dict) -> str:
+        return format_mail_display_time(
+            mail_info.get("date_raw", ""),
+            mail_info.get("date", "未知"),
+            self._get_display_timezone(),
+        )
+
+    def _format_runtime_time(self, date_raw: str) -> str:
+        return format_runtime_display_time(date_raw, self._get_display_timezone())
 
     async def initialize(self):
         """插件初始化后启动后台邮件检查循环"""
@@ -53,9 +74,9 @@ class MailNotifyPlugin(Star):
                             logger.error(
                                 f"邮件通知插件：{account['email']} 检查失败: {e}"
                             )
-                        self._last_check_time[account["email"]] = (
-                            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        )
+                        self._last_check_time[account["email"]] = datetime.now(
+                            timezone.utc
+                        ).isoformat()
                 await asyncio.sleep(max(interval, 1) * 60)
             except asyncio.CancelledError:
                 break
@@ -219,6 +240,7 @@ class MailNotifyPlugin(Star):
         account_name = account.get("name") or account["email"]
         use_ai = self.config.get("ai_summary", False)
         body_text = mail_info["body"]
+        display_time = self._format_mail_time(mail_info)
 
         if use_ai and body_text:
             body_text = await self._try_ai_summary(mail_info, notify_umo, body_text)
@@ -231,7 +253,7 @@ class MailNotifyPlugin(Star):
         if mail_info["from_addr"] and mail_info["from_addr"] != mail_info["from_name"]:
             lines[-1] += f" <{mail_info['from_addr']}>"
         lines.append(f"📋 主题: {mail_info['subject']}")
-        lines.append(f"🕐 时间: {mail_info['date']}")
+        lines.append(f"🕐 时间: {display_time}")
         if body_text:
             label = "📝 AI摘要" if use_ai else "📝 预览"
             lines.append(f"{label}: {body_text}")
@@ -367,7 +389,7 @@ class MailNotifyPlugin(Star):
             addr = acc.get("email", "?")
             name = acc.get("name") or addr
             status = self._account_status.get(addr, "⏳ 等待首次检查")
-            last = self._last_check_time.get(addr, "尚未检查")
+            last = self._format_runtime_time(self._last_check_time.get(addr, ""))
             lines.append(f"📧 {name} ({addr})")
             lines.append(f"   状态: {status}")
             lines.append(f"   最近检查: {last}")
@@ -407,9 +429,7 @@ class MailNotifyPlugin(Star):
             except Exception as e:
                 self._account_status[email_addr] = f"❌ {str(e)[:80]}"
                 errors.append(f"{account.get('name') or email_addr}: {e}")
-            self._last_check_time[email_addr] = datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            self._last_check_time[email_addr] = datetime.now(timezone.utc).isoformat()
 
         if errors:
             yield event.plain_result("⚠️ 部分邮箱检查失败:\n" + "\n".join(errors))
@@ -476,7 +496,7 @@ class MailNotifyPlugin(Star):
         ]
         for i, m in enumerate(emails, 1):
             lines.append(f"{i}. 📋 {m['subject']}")
-            lines.append(f"   📤 {m['from_name']}  🕐 {m['date']}")
+            lines.append(f"   📤 {m['from_name']}  🕐 {self._format_mail_time(m)}")
         yield event.plain_result("\n".join(lines))
 
     @filter.command("mail_reply")

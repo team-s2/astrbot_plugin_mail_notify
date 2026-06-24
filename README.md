@@ -2,7 +2,7 @@
 
 # 📬 邮件通知插件
 
-[![Plugin Version](https://img.shields.io/badge/Latest_Version-v1.3.2-blue.svg?style=for-the-badge&color=76bad9)](https://github.com/gangcaiyoule/astrbot_plugin_mail_notify)
+[![Plugin Version](https://img.shields.io/badge/Latest_Version-v1.3.3-blue.svg?style=for-the-badge&color=76bad9)](https://github.com/gangcaiyoule/astrbot_plugin_mail_notify)
 [![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-ff69b4?style=for-the-badge)](https://github.com/AstrBotDevs/AstrBot)
 [![License](https://img.shields.io/badge/License-AGPL-green.svg?style=for-the-badge)](LICENSE)
 
@@ -240,6 +240,7 @@ Outlook 可以直接使用**账户登录密码**。
 | 检查间隔（分钟） | 5 | 后台轮询间隔，建议不低于 2 分钟 |
 | 启用 AI 摘要 | 关闭 | 开启后使用 LLM 对邮件生成中文摘要 |
 | 邮件正文最大截取长度 | 500 | 预览或 AI 摘要输入的正文字符数上限 |
+| 通知显示时区 | `Asia/Shanghai` | 前端下拉可直接选择常见时区；若选择“自定义时区”，再填写 IANA 时区名称，例如 `Asia/Singapore`、`Australia/Sydney` |
 
 ## 📬 通知效果示例
 
@@ -248,7 +249,7 @@ Outlook 可以直接使用**账户登录密码**。
 ━━━━━━━━━━━━━━━━
 📤 发件人: 张三 <zhangsan@example.com>
 📋 主题: 关于项目进度汇报
-🕐 时间: 2026-03-07 14:30
+🕐 时间: 2026-03-07 14:30（北京时间）
 📝 预览: 你好，本周项目已完成模块A的开发...
 ```
 
@@ -259,7 +260,7 @@ Outlook 可以直接使用**账户登录密码**。
 ━━━━━━━━━━━━━━━━
 📤 发件人: 张三 <zhangsan@example.com>
 📋 主题: 关于项目进度汇报
-🕐 时间: 2026-03-07 14:30
+🕐 时间: 2026-03-07 14:30（北京时间）
 📝 AI摘要: 通知项目进度：模块A已完成开发，下周将进入测试阶段。
 ```
 
@@ -288,6 +289,7 @@ Outlook 可以直接使用**账户登录密码**。
 ## 📦 版本更新日志
 ### v1.3
 - 添加黑白名单规则
+- 时区时间转化
 
 ### v1.2
 - 兼容网易邮箱

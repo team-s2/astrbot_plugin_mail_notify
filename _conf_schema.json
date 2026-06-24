@@ -76,6 +76,51 @@
     "default": 5,
     "hint": "每隔多少分钟检查一次新邮件，建议不低于 2 分钟"
   },
+  "display_timezone": {
+    "description": "通知显示时区",
+    "type": "string",
+    "default": "Asia/Shanghai",
+    "hint": "可直接选择常见时区；如果列表里没有需要的时区，请选择“自定义时区”并填写 IANA 时区名称",
+    "options": [
+      "Asia/Shanghai",
+      "Asia/Tokyo",
+      "Asia/Seoul",
+      "Asia/Hong_Kong",
+      "Asia/Taipei",
+      "UTC",
+      "Europe/London",
+      "Europe/Paris",
+      "America/New_York",
+      "America/Chicago",
+      "America/Denver",
+      "America/Los_Angeles",
+      "__custom__"
+    ],
+    "labels": [
+      "北京时间 (Asia/Shanghai)",
+      "日本时间 (Asia/Tokyo)",
+      "韩国时间 (Asia/Seoul)",
+      "香港时间 (Asia/Hong_Kong)",
+      "台北时间 (Asia/Taipei)",
+      "UTC",
+      "英国时间 (Europe/London)",
+      "中欧时间 (Europe/Paris)",
+      "美国东部时间 (America/New_York)",
+      "美国中部时间 (America/Chicago)",
+      "美国山地时间 (America/Denver)",
+      "美国西部时间 (America/Los_Angeles)",
+      "自定义时区"
+    ]
+  },
+  "display_timezone_custom": {
+    "description": "自定义时区",
+    "type": "string",
+    "default": "",
+    "hint": "填写 IANA 时区名称，例如 Asia/Singapore、Australia/Sydney、America/Phoenix",
+    "condition": {
+      "display_timezone": "__custom__"
+    }
+  },
   "admin_uids": {
     "description": "管理员 UID 列表",
     "type": "list",
