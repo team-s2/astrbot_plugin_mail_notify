@@ -33,6 +33,8 @@ class MailNotifyPlugin(Star):
 
     def _get_display_timezone(self) -> str:
         configured_name = self.config.get("display_timezone", "")
+        if configured_name == "__custom__":
+            configured_name = self.config.get("display_timezone_custom", "")
         return get_display_timezone_name(configured_name)
 
     def _format_mail_time(self, mail_info: dict) -> str:

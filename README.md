@@ -240,7 +240,7 @@ Outlook 可以直接使用**账户登录密码**。
 | 检查间隔（分钟） | 5 | 后台轮询间隔，建议不低于 2 分钟 |
 | 启用 AI 摘要 | 关闭 | 开启后使用 LLM 对邮件生成中文摘要 |
 | 邮件正文最大截取长度 | 500 | 预览或 AI 摘要输入的正文字符数上限 |
-| 通知显示时区 | `Asia/Shanghai` | 使用 IANA 时区名称显示通知时间，例如 `Asia/Shanghai`、`America/New_York`、`Europe/London` |
+| 通知显示时区 | `Asia/Shanghai` | 前端下拉可直接选择常见时区；若选择“自定义时区”，再填写 IANA 时区名称，例如 `Asia/Singapore`、`Australia/Sydney` |
 
 ## 📬 通知效果示例
 
